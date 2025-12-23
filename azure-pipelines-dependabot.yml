@@ -2,7 +2,7 @@ trigger: none
 pr: none
 
 schedules:
-  - cron: "0 2 * * *"   # Daily at 02:00 UTC
+  - cron: "0 2 * * *"
     displayName: Daily Dependabot Run
     branches:
       include:
@@ -19,17 +19,15 @@ steps:
   - checkout: self
     displayName: Checkout repository
 
-
   - task: Docker@2
     displayName: Build Dependabot (internal)
     inputs:
       command: build
-      Dockerfile: Dockerfile
-      buildContext: .
+      Dockerfile: dependabot/Dockerfile
+      buildContext: dependabot
       repository: dependabot-internal
       tags: |
         latest
-
 
   - task: Docker@2
     displayName: Run Dependabot (npm)
