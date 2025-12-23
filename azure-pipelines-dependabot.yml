@@ -1,0 +1,44 @@
+trigger: none
+
+schedules:
+  - cron: "0 2 * * *"   # Every Monday at 02:00 UTC
+    displayName: Weekly Dependabot Run
+    branches:
+      include:
+        - main
+    always: true
+
+
+pool:
+  vmImage: ubuntu-latest
+
+
+variables:
+  - group: appsec-depandabot
+
+
+steps:
+  - checkout: self
+    displayName: Checkout repository
+
+  - task: Docker@2
+    displayName: Build Dependabot runtime image
+    inputs:
+      command: build
+      Dockerfile: dependabot/Dockerfile
+      repository: dependabot-runtime
+      tags: |
+        latest
+
+  - task: Docker@2
+    displayName: Run Dependabot (npm)
+    inputs:
+      command: run
+      containerName: dependabot-npm
+      envVars: |
+        ADO_DEPENDABOT_PAT=$(ADO_DEPENDABOT_PAT)
+        PACKAGE_MANAGER=npm
+        DIRECTORY_PATH=/
+        PROJECT_PATH=$(System.CollectionUri:22)$(System.TeamProject)/_git/$(Build.Repository.Name)
+      arguments: |
+        dependabot-runtime:latest
