@@ -1,8 +1,10 @@
 trigger: none
+pr: none
+
 
 schedules:
-  - cron: "0 2 * * *"   # Every Monday at 02:00 UTC
-    displayName: Weekly Dependabot Run
+  - cron: "0 2 * * *"   # Daily at 02:00 UTC
+    displayName: Daily Dependabot Run
     branches:
       include:
         - main
@@ -14,7 +16,7 @@ pool:
 
 
 variables:
-  - group: appsec-depandabot
+  - group: appsec-depandabot   # contains ADO_DEPENDABOT_PAT
 
 
 steps:
@@ -22,23 +24,13 @@ steps:
     displayName: Checkout repository
 
   - task: Docker@2
-    displayName: Build Dependabot runtime image
-    inputs:
-      command: build
-      Dockerfile: dependabot/Dockerfile
-      repository: dependabot-runtime
-      tags: |
-        latest
-
-  - task: Docker@2
     displayName: Run Dependabot (npm)
     inputs:
       command: run
-      containerName: dependabot-npm
-      envVars: |
-        ADO_DEPENDABOT_PAT=$(ADO_DEPENDABOT_PAT)
-        PACKAGE_MANAGER=npm
-        DIRECTORY_PATH=/
-        PROJECT_PATH=$(System.CollectionUri:22)$(System.TeamProject)/_git/$(Build.Repository.Name)
       arguments: |
-        dependabot-runtime:latest
+        --rm
+        -e AZURE_ACCESS_TOKEN=$(ADO_DEPENDABOT_PAT)
+        -e PACKAGE_MANAGER=npm
+        -e DIRECTORY_PATH=/
+        -e PROJECT_PATH=$(System.CollectionUri:22)$(System.TeamProject)/_git/$(Build.Repository.Name)
+        ghcr.io/dependabot/dependabot-updater-npm_and_yarn
