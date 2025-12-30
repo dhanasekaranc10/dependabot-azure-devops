@@ -1,0 +1,19 @@
+FROM ruby:3.3-slim
+
+ENV LANG=C.UTF-8 LC_ALL=C.UTF-8
+
+RUN apt-get update && apt-get install -y \
+    git curl ca-certificates build-essential nodejs npm \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /dependabot
+
+# Clone Dependabot core
+RUN git clone --depth 1 https://github.com/dependabot/dependabot-core.git .
+
+RUN gem install bundler && bundle install
+
+COPY run.sh /dependabot/run.sh
+RUN sed -i 's/\r$//' /dependabot/run.sh && chmod +x /dependabot/run.sh
+
+ENTRYPOINT ["/dependabot/run.sh"]
