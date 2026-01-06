@@ -3,7 +3,7 @@ pr: none
 
 schedules:
   - cron: "0 2 * * *"
-    displayName: Daily Dependabot Run
+    displayName: "Daily Dependabot Scan"
     branches:
       include:
         - main
@@ -13,30 +13,48 @@ pool:
   vmImage: ubuntu-latest
 
 variables:
-  - group: appsec-depandabot   # contains ADO_DEPENDABOT_PAT
+  - group: appsec-dependabot
 
 steps:
   - checkout: self
-    displayName: Checkout repository
 
   - task: Docker@2
-    displayName: Build Dependabot (internal)
+    displayName: "Build Dependabot Core Image"
     inputs:
       command: build
-      Dockerfile: dependabot/Dockerfile
-      buildContext: dependabot
-      repository: dependabot-internal
-      tags: |
-        latest
+      dockerfile: dependabot/Dockerfile
+      repository: dependabot-core
+      tags: latest
+      arguments: --progress=plain
 
+  # Scan appsec-renovate-bot
   - task: Docker@2
-    displayName: Run Dependabot (npm)
+    displayName: "Scan: appsec-renovate-bot"
     inputs:
       command: run
       arguments: |
         --rm
         -e AZURE_ACCESS_TOKEN=$(ADO_DEPENDABOT_PAT)
+        -e AZURE_ORG=TEXTOCORP
         -e PACKAGE_MANAGER=npm
+        -e PROJECT_PATH=TEXTOCORP/InfoSec/_git/appsec-renovate-bot
         -e DIRECTORY_PATH=/
-        -e PROJECT_PATH=$(System.CollectionUri:22)$(System.TeamProject)/_git/$(Build.Repository.Name)
-        dependabot-internal:latest
+        dependabot-core:latest
+    continueOnError: true
+
+  # Scan appsec-test
+  - task: Docker@2
+    displayName: "Scan: appsec-test"
+    inputs:
+      command: run
+      arguments: |
+        --rm
+        -e AZURE_ACCESS_TOKEN=$(ADO_DEPENDABOT_PAT)
+        -e AZURE_ORG=TEXTOCORP
+        -e PACKAGE_MANAGER=npm
+        -e PROJECT_PATH=TEXTOCORP/InfoSec/_git/appsec-test
+        -e DIRECTORY_PATH=/
+        dependabot-core:latest
+    continueOnError: true
+
+  # Add more repos as needed by copying the Docker@2 task above
